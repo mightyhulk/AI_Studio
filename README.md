@@ -62,6 +62,7 @@ into a single, scalable AI system.
 
 ## 📂 Project Structure
 
+```
 huggingface-ai-studio/
 │
 ├── text_summarization/
@@ -76,3 +77,5 @@ huggingface-ai-studio/
 ├── app.py # Unified entry point
 ├── requirements.txt
 └── README.md
+
+```
