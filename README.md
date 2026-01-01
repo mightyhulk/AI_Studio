@@ -40,7 +40,7 @@ into a single, scalable AI system.
 ## 🧠 Models Used
 
 | Task | Model |
-|----|------|
+|------|-------|
 | Text Summarization | `facebook/bart-large-cnn` |
 | Text-to-Image | `stabilityai/stable-diffusion` |
 | Text-to-Speech | `facebook/fastspeech2-en-ljspeech` / `suno/bark` |
