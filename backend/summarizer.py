@@ -1,14 +1,39 @@
 import os 
 import pdfplumber
 from docx import Document
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import PromptTemplate
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
+llm=ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    temperature=0,
+    api_key=os.getenv('gemini_api')
+)
 
 
 def summarizer(prompt):
-    return True
-
-
+    
+    summary_prompt = PromptTemplate(
+    input_variables=["text"], 
+    template='''
+    You are an expert text summarizer. 
+    
+    Summarize the following text clearly and conscisely. 
+    Focus on key points and remove redundancy. 
+    
+    Text: {text}
+    Summary: 
+    '''
+    )
+    
+    summary_chain = summary_prompt | llm
+    
+    result = summary_chain.invoke({"text": prompt})
+    return result.content
 
 
 
@@ -39,21 +64,20 @@ def get_file_type(file_path):
 
 
 
-
 def text_summarizer(file, prompt):
     
     if file:
         file_type = get_file_type(file) 
         if file_type == 'txt':
-            text = extract_text_from_txt(file)
+            context = extract_text_from_txt(file)
         elif file_type == 'docx':
-            text = extract_text_from_docx(file)
+            context = extract_text_from_docx(file)
         elif file_type == 'pdf':
-            text = extract_text_from_pdf(file)
+            context = extract_text_from_pdf(file)
         else:
-            text = "Please upload correct file type (txt, docx, pdf)"
+            context = "Please upload correct file type (txt, docx, pdf)"
             
-        final_prompt = prompt + "\n" + text
+        final_prompt = prompt + "\n" + context
         
         summarized_text = summarizer(final_prompt)
             
@@ -62,15 +86,5 @@ def text_summarizer(file, prompt):
         
     return summarized_text
         
-   
-
-
-
-
-
-
-
-
-
 
 
