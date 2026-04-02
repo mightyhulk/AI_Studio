@@ -1,5 +1,3 @@
-
-
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="langchain_tavily")
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -29,7 +27,7 @@ def web_search(query):
     return context
 
     
-def chat(question):
+def text_gen(question):
     prompt = PromptTemplate(
         input_variables=["question", "context"],
         template = '''
