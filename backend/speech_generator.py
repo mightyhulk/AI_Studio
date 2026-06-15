@@ -32,14 +32,24 @@ VOICE_MAP = {
     "neutral": ["zephyr", "umbriel", "vindemiatrix"],
 }
 
+# Gemini TTS multi-speaker mode supports exactly 2 speakers.
+MAX_MULTI_SPEAKERS = 2
 
-def _resolve_voice_name(gender: str | None) -> str:
+
+def _resolve_voice_name(gender: str | None, used: set | None = None) -> str:
+    """Pick a voice for the given gender, avoiding already-used voices."""
     key = (gender or "neutral").lower()
-    return VOICE_MAP.get(key, VOICE_MAP["neutral"])[0]
+    candidates = VOICE_MAP.get(key, VOICE_MAP["neutral"])
+    if used:
+        for v in candidates:
+            if v not in used:
+                return v
+    return candidates[0]
 
 
-def get_voice_config(speaker_name: str, gender: str):
-    voice_name = _resolve_voice_name(gender)
+def get_voice_config(speaker_name: str, gender: str, used_voices: set):
+    voice_name = _resolve_voice_name(gender, used_voices)
+    used_voices.add(voice_name)
     return types.SpeakerVoiceConfig(
         speaker=speaker_name,
         voice_config=types.VoiceConfig(
@@ -49,7 +59,8 @@ def get_voice_config(speaker_name: str, gender: str):
 
 
 def build_speaker_configs(speakers):
-    return [get_voice_config(s["name"], s["gender"]) for s in speakers]
+    used_voices = set()
+    return [get_voice_config(s["name"], s["gender"], used_voices) for s in speakers]
 
 
 def format_prompt_for_speakers(prompt: str, speakers):
@@ -65,10 +76,20 @@ def format_prompt_for_speakers(prompt: str, speakers):
     return "\n".join(formatted)
 
 
+def _sanitize_json(raw: str) -> str:
+    """Fix common LLM JSON issues: trailing commas, single quotes, etc."""
+    # Remove trailing commas before } or ]
+    cleaned = re.sub(r",\s*([}\]])", r"\1", raw)
+    # Replace single-quoted strings with double-quoted strings
+    cleaned = re.sub(r"'(\w+)'\s*:", r'"\1":', cleaned)
+    cleaned = re.sub(r":\s*'([^']*)'", r': "\1"', cleaned)
+    return cleaned
+
+
 def extract_json(text: str):
     match = re.search(r"(\[.*\])", text, re.DOTALL)
     if match:
-        return match.group(1)
+        return _sanitize_json(match.group(1))
     return None
 
 
@@ -107,34 +128,47 @@ def speech_gen(query: str, output_path: str | Path | None = None):
     if not prompt:
         raise ValueError("Prompt for speech generation cannot be empty.")
 
-    analysis_instruction = f"""
-    Analyze the following prompt and extract:
-    - The number of speakers
-    - For each speaker: name (if any), gender (male/female/neutral/unknown), and a short description if possible
-    - If names are not given, invent plausible ones based on context and gender
-    - Output a JSON list of speakers, each as an object with keys: name, gender, description
+    analysis_instruction = f"""\
+Analyze the following prompt and extract speakers.
+For each speaker return an object with keys: "name", "gender", "description".
+If names are not given, invent plausible ones. Gender must be one of: male, female, neutral.
+Return ONLY a JSON array, no markdown, no extra text.
 
-    Prompt:
-    \"\"\"{prompt}\"\"\"
-    """
+Prompt:
+\"\"\"{prompt}\"\"\"
+"""
 
     analysis_response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=analysis_instruction,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+        ),
     )
 
     json_text = extract_json(_response_text(analysis_response))
     if not json_text:
-        raise ValueError("Could not extract speaker info from LLM response.")
-
-    speakers = json.loads(json_text)
-    if not isinstance(speakers, list) or not speakers:
-        raise ValueError("Speaker analysis did not return any speakers.")
+        # Fallback: treat the prompt as single-speaker narration
+        speakers = [{"name": "Narrator", "gender": "neutral", "description": "General narration"}]
+    else:
+        try:
+            speakers = json.loads(json_text)
+        except json.JSONDecodeError:
+            # JSON was still malformed after sanitization — use a safe default
+            speakers = [{"name": "Narrator", "gender": "neutral", "description": "General narration"}]
+        if not isinstance(speakers, list) or not speakers:
+            speakers = [{"name": "Narrator", "gender": "neutral", "description": "General narration"}]
 
     for index, speaker in enumerate(speakers):
         speaker.setdefault("name", f"Speaker {index + 1}")
         speaker.setdefault("gender", "neutral")
         speaker.setdefault("description", "General narration")
+
+    # Gemini TTS allows at most 2 speakers in multi-speaker mode.
+    # If the LLM detected more, keep only the first two and note the rest.
+    all_speakers = speakers
+    if len(speakers) > MAX_MULTI_SPEAKERS:
+        speakers = speakers[:MAX_MULTI_SPEAKERS]
 
     if is_descriptive_prompt(prompt, speakers):
         if len(speakers) == 1:
@@ -145,10 +179,12 @@ def speech_gen(query: str, output_path: str | Path | None = None):
             )
         else:
             speaker_list = ", ".join([f"{s['name']} ({s['gender']})" for s in speakers])
+            topic = all_speakers[0].get('description') or 'a casual conversation'
             instruction = (
-                f"Write a detailed, engaging conversation (about 100-200 words) as a dialogue between {speaker_list}. "
-                f"Each line should start with the speaker's name followed by a colon. "
-                f"Topic: {speakers[0]['description']}."
+                f"Write a detailed, engaging conversation (about 100-200 words) as a dialogue between exactly these two speakers: {speaker_list}. "
+                f"Each line MUST start with the speaker's name followed by a colon. "
+                f"Use ONLY these two speaker names, no others. "
+                f"Topic: {topic}."
             )
 
         generated_content = client.models.generate_content(
@@ -173,14 +209,17 @@ def speech_gen(query: str, output_path: str | Path | None = None):
             )
         )
 
-    tts_response = client.models.generate_content(
-        model="gemini-2.5-flash-preview-tts",
-        contents=formatted_prompt,
-        config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=speech_config,
-        ),
-    )
+    try:
+        tts_response = client.models.generate_content(
+            model="gemini-2.5-flash-preview-tts",
+            contents=formatted_prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=speech_config,
+            ),
+        )
+    except Exception as tts_err:
+        raise ValueError(f"Speech generation failed: {tts_err}") from tts_err
 
     candidate = tts_response.candidates[0]
     parts = getattr(candidate.content, "parts", [])
