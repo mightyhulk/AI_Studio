@@ -18,3 +18,4 @@ gradio-client
 elevenlabs
 python-multipart
 pytest
+yt-dlp

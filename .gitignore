@@ -210,3 +210,12 @@ __marimo__/
 # Files & Docs
 learning.md
 test*.py
+rules.md
+backup/
+test_files/
+status_rules.md
+test*/                     
+                      
+
+
+                      
