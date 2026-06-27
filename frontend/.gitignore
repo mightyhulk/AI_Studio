@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+## testing files
+test_history.cjs
+test_history2.cjs
+test_history3.cjs
+
