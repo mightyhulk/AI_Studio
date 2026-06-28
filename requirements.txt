@@ -11,11 +11,7 @@ tavily-python
 langchain-tavily
 pillow
 requests
-xai-sdk
-scipy
-pydub
-gradio-client
-elevenlabs
 python-multipart
-pytest
 yt-dlp
+bcrypt
+PyJWT
