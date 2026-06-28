@@ -3,9 +3,7 @@ uvicorn
 pydantic
 pdfplumber 
 python-docx
-langchain
 langchain-google-genai
-google-generativeai
 python-dotenv
 tavily-python
 langchain-tavily
