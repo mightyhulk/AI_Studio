@@ -1,9 +1,15 @@
 import os
+import sys
 import tempfile
 from pathlib import Path
+
+# Add the current directory to sys.path so local imports work correctly on Vercel
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+
 from summarizer import text_summarizer
 from image_editor import image_edit
 from image_create import create_image
@@ -11,7 +17,6 @@ from speech_generator import speech_gen
 from text_generator import text_gen
 from music_generator import music_gen
 from auth import router as auth_router
-
 
 app = FastAPI(
     title="Alexandria AI Studio",
