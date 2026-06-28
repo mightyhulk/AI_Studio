@@ -93,7 +93,8 @@ def extract_json(text: str):
     return None
 
 
-client = genai.Client(api_key=os.getenv("gemini_api"))
+def get_client():
+    return genai.Client(api_key=os.getenv("gemini_api", "missing_key"))
 
 
 def is_descriptive_prompt(prompt: str, speakers):
@@ -138,6 +139,7 @@ Prompt:
 \"\"\"{prompt}\"\"\"
 """
 
+    client = get_client()
     analysis_response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=analysis_instruction,
@@ -187,6 +189,7 @@ Prompt:
                 f"Topic: {topic}."
             )
 
+        client = get_client()
         generated_content = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=instruction,
@@ -210,6 +213,7 @@ Prompt:
         )
 
     try:
+        client = get_client()
         tts_response = client.models.generate_content(
             model="gemini-2.5-flash-preview-tts",
             contents=formatted_prompt,

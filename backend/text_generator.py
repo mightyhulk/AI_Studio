@@ -8,25 +8,19 @@ from langchain_tavily import TavilySearch
 
 load_dotenv()
 
-llm = ChatGoogleGenerativeAI(
-    model = "gemini-2.5-flash",
-    temperature = 0,
-    api_key = os.getenv('gemini_api_2')
-)
-
-
-tavily_tool = TavilySearch(
-    max_result=3,
-    search_depth="advanced"
-)
-
+def get_tavily_tool():
+    return TavilySearch(
+        max_result=3,
+        search_depth="advanced",
+        api_key=os.getenv("TAVILY_API_KEY", "missing_key")
+    )
 
 def web_search(query):
+    tavily_tool = get_tavily_tool()
     search_result = tavily_tool.invoke({"query": query})
     context = "\n".join([r.get("content") for r in search_result["results"]])
     return context
 
-    
 def text_gen(question):
     prompt = PromptTemplate(
         input_variables=["question", "context"],
@@ -42,6 +36,12 @@ Context:
 Answer:       
         '''
         
+    )
+    
+    llm = ChatGoogleGenerativeAI(
+        model = "gemini-2.5-flash",
+        temperature = 0,
+        api_key = os.getenv('gemini_api_2', 'missing_key')
     )
     
     context = web_search(question)

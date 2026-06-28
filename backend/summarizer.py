@@ -4,16 +4,15 @@ from docx import Document
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-llm=ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    temperature=0,
-    api_key=os.getenv('gemini_api')
-)
-
+def get_llm():
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0,
+        api_key=os.getenv('gemini_api', 'missing_key')
+    )
 
 def summarizer(prompt):
     
@@ -30,6 +29,7 @@ def summarizer(prompt):
     '''
     )
     
+    llm = get_llm()
     summary_chain = summary_prompt | llm
     
     result = summary_chain.invoke({"text": prompt})
