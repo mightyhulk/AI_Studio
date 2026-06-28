@@ -35,7 +35,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
-GENERATED_DIR = Path(__file__).resolve().parent.parent / "generated"
+GENERATED_DIR = Path(tempfile.gettempdir()) / "generated"
 
 
 async def _persist_upload(upload: UploadFile) -> str:

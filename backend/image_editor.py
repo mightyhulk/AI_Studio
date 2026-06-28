@@ -20,7 +20,8 @@ HEADERS = {
     "Authorization": f"Bearer {CF_API_TOKEN}",
 }
 
-DEFAULT_OUTPUT_DIR = Path("../generated")
+import tempfile
+DEFAULT_OUTPUT_DIR = Path(tempfile.gettempdir()) / "generated"
 DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 

@@ -14,7 +14,8 @@ load_dotenv()
 
 HF_TOKEN = os.getenv("hugging_face_api", "").strip()
 API_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell"
-GENERATED_DIR = Path(__file__).resolve().parents[1] / "generated"
+import tempfile
+GENERATED_DIR = Path(tempfile.gettempdir()) / "generated"
 TIMEOUT_SECONDS = 120
 DEFAULT_WIDTH = 1024
 DEFAULT_HEIGHT = 1024

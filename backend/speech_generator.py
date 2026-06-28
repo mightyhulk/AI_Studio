@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "generated"
+import tempfile
+BASE_OUTPUT_DIR = Path(tempfile.gettempdir()) / "generated"
 DEFAULT_AUDIO_PATH = BASE_OUTPUT_DIR / "audio2.wav"
 
 
