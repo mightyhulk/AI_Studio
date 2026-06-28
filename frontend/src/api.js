@@ -10,7 +10,7 @@
  *   text_gen | summarize | image_create | image_editor | speech_generation | music_generation
  */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 /**
  * Send a prompt to the backend.
